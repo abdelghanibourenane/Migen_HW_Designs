@@ -166,7 +166,7 @@ def recall_from_location(dut,location):
     yield dut.CYC_i.eq(1)
     yield dut.STB_i.eq(1)
     yield dut.ADR_i.eq(location)
-    yield
+    yield from tick()
     yield dut.STB_i.eq(0)
     yield from tick()
     yield dut.CYC_i.eq(0)
@@ -198,27 +198,37 @@ def simulation_story(dut):
     capacity_left = CAPACITY
     stored_keys_values = {}
     stored_locations = {}
+    
+    temp = {stored_location : key for key, stored_location in stored_locations.items()}
+    res = {stored_location : key for key, stored_location in temp.items()}
+    res = {}
+
+    for key,stored_location in stored_locations.items():
+        if value not in res.values():
+             res[key] = stored_location
+
+
 
     # Tests for issue #115
 
     key=1111
     value=11111
-    stored_location = yield from store_key_value(dut,1111,11111	)
-    stored_locations[key] = stored_location
+    stored_location = yield from store_key_value(dut,1111,11111)
+    res[key] = stored_location
     assert (value == (yield from recall_from_location(dut,stored_location)))
     capacity_left = capacity_left-1
 
     key=2222
     value=22222
     stored_location = yield from store_key_value(dut,key,value)
-    stored_locations[key] = stored_location
+    res[key] = stored_location
     assert (value == (yield from recall_from_location(dut,stored_location)))
     capacity_left = capacity_left-1
 
     key=3334
     value=33334
     stored_location = yield from store_key_value(dut,key,value)
-    stored_locations[key] = stored_location
+    res[key] = stored_location
     assert (value == (yield from recall_from_location(dut,stored_location)))
     capacity_left = capacity_left-1
 
@@ -226,7 +236,7 @@ def simulation_story(dut):
     key=1111
     value=10101
     stored_location = yield from store_key_value(dut,key,value)
-    stored_locations[key] = stored_location
+    res[key] = stored_location
     assert (value == (yield from recall_from_location(dut,stored_location)))
 
     # Test to see if KEYS are not used as locations.
@@ -234,45 +244,47 @@ def simulation_story(dut):
     # Since the keyspace is larger than the capacity_left,
     # we generate two keys that will map to the same location
     # by throwing away bits.
-
-    key=0x1445
-    value=7878
-    stored_location = yield from store_key_value(dut,key,value)
-    stored_locations[key] = stored_location
+    
+    key1=0x1445
+    value1=7878
+    stored_location1 = yield from store_key_value(dut,key1,value1)
+    res[key1] = stored_location1
     capacity_left = capacity_left-1
-    assert (value == (yield from recall_from_location(dut,stored_location)))
+    assert (value1 == (yield from recall_from_location(dut,stored_location1)))
+
 
 
     # throw away bit from beginning
     key2=0x0445
     value2=7979
     stored_location2 = yield from store_key_value(dut,key2,value2)
-    stored_locations[key2] = stored_location2
+    res[key2] = stored_location2
     capacity_left = capacity_left-1
     assert (value2 == (yield from recall_from_location(dut,stored_location2)))
 
     # throw away bit from end
+
     key3=0x1444
     value3=7676
     stored_location3 = yield from store_key_value(dut,key3,value3)
-    stored_locations[key3] = stored_location3
+    res[key3] = stored_location3
     capacity_left = capacity_left-1
     assert (value3 == (yield from recall_from_location(dut,stored_location3)))
-
+    
     # Lets make sure they are not stored in the same location
-    assert(stored_location != stored_location2)
-    assert(stored_location != stored_location3)
+    assert(stored_location1 != stored_location2)
+    assert(stored_location1 != stored_location3)
     assert(stored_location3 != stored_location2)
 
     # Lets make sure we can still get all our numbers back
-    assert (value == (yield from recall_from_location(dut,stored_location)))
+    assert (value1 == (yield from recall_from_location(dut,stored_location1)))
     assert (value2 == (yield from recall_from_location(dut,stored_location2)))
     assert (value3 == (yield from recall_from_location(dut,stored_location3)))
 
     key=1111
     value=10010
     stored_location = yield from store_key_value(dut,key,value)
-    stored_locations[key] = stored_location
+    res[key] = stored_location
     capacity_left = capacity_left-1
     assert (value == (yield from recall_from_location(dut,stored_location)))
 
@@ -291,7 +303,7 @@ def simulation_story(dut):
 
         random_value = random.getrandbits(WIDTH)
         stored_location = yield from store_key_value(dut,key,random_value)
-        stored_locations[key] = stored_location
+        res[key] = stored_location
         stored_keys_values[key] = random_value
         capacity_left = capacity_left - 1
 
@@ -336,4 +348,4 @@ def simulation_story(dut):
 
 if __name__ == "__main__":
     dut = key_value(width=WIDTH, depth=DEPTH)
-    run_simulation(dut, simulation_story(dut), vcd_name="test_memory_wb.vcd")
+    run_simulation(dut, simulation_story(dut), vcd_name="test_key_value_memory_wb_.vcd")
